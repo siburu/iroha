@@ -8,6 +8,8 @@
 #include "interfaces/iroha_internal/transaction_batch.hpp"
 #include "interfaces/transaction.hpp"
 
+#include <mutex>
+
 namespace iroha::ordering {
 
   BatchesContext::BatchesContext() : tx_count_(0ull) {}

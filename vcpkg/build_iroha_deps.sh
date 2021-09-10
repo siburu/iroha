@@ -7,7 +7,7 @@ VCPKG_REF=${VCPKG_REF:-$(head -1 "$script_dir/VCPKG_COMMIT_SHA")}
 VCPKG_REF=${VCPKG_REF:-2021.05.12}
 
 git -C $vcpkg_path fetch origin ||
-   git clone https://github.com/microsoft/vcpkg $vcpkg_path
+   git clone https://github.com/siburu/vcpkg $vcpkg_path
 
 git -C $vcpkg_path -c advice.detachedHead=false checkout -f $VCPKG_REF
 git -C $vcpkg_path/ports clean -fdx

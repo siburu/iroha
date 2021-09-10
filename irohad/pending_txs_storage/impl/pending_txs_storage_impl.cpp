@@ -9,6 +9,8 @@
 #include "interfaces/transaction.hpp"
 #include "multi_sig_transactions/state/mst_state.hpp"
 
+#include <mutex>
+
 using iroha::PendingTransactionStorageImpl;
 
 PendingTransactionStorageImpl::SharedTxsCollectionType
