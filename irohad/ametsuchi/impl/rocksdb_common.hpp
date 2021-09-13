@@ -24,6 +24,7 @@
 #include "interfaces/common_objects/amount.hpp"
 #include "interfaces/common_objects/types.hpp"
 #include "interfaces/permissions.hpp"
+#include "cryptography/hash.hpp"
 
 // clang-format off
 /**
@@ -1301,9 +1302,9 @@ namespace iroha::ametsuchi {
   template <kDbOperation kOp = kDbOperation::kGet,
             kDbEntry kSc = kDbEntry::kMustExist>
   inline expected::Result<std::optional<std::string_view>, DbError>
-  forTransactionStatus(RocksDbCommon &common, std::string_view tx_hash) {
+  forTransactionStatus(RocksDbCommon &common, shared_model::crypto::Hash const &tx_hash) {
     return dbCall<std::string_view, kOp, kSc>(
-        common, fmtstrings::kTransactionStatus, tx_hash);
+        common, fmtstrings::kTransactionStatus, std::string_view((char const*)tx_hash.blob().data(), tx_hash.blob().size()));
   }
 
   /**
