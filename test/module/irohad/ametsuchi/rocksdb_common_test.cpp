@@ -5,6 +5,9 @@
 #include <gtest/gtest.h>
 #include <boost/filesystem.hpp>
 #include <iostream>
+#include <chrono>
+#include <thread>
+#include <profiling/memory_profiler.hpp>
 
 #include "ametsuchi/impl/database_cache/cache.hpp"
 #include "ametsuchi/impl/rocksdb_common.hpp"
@@ -35,7 +38,7 @@ class RocksDBTest : public ::testing::Test {
 
     auto dbc = std::make_shared<DatabaseCache<std::string>>();
     dbc->addCacheblePath("k");
-    tx_context_ = std::make_shared<RocksDBContext>(db_port_, dbc);
+    tx_context_ = std::make_shared<RocksDBContext>(db_port_, std::move(dbc));
 
     insertDb(key1_, value1_);
     insertDb(key2_, value2_);

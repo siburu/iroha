@@ -61,6 +61,7 @@ target_link_libraries(rocksdb_common_test
     shared_model_interfaces
     common
     RocksDB::rocksdb
+    memory_profiler
     )
 
 addtest(flat_file_test flat_file_test.cpp)

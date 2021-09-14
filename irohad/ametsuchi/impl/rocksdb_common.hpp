@@ -471,6 +471,7 @@ namespace iroha::ametsuchi {
 
       rocksdb::Options options;
       options.create_if_missing = true;
+      options.max_open_files = 50;
 
       rocksdb::OptimisticTransactionDB *transaction_db;
       auto status = rocksdb::OptimisticTransactionDB::Open(
