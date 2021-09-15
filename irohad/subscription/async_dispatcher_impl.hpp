@@ -43,11 +43,14 @@ namespace iroha::subscription {
 
     void uploadToHandler(typename Parent::Tid const tid,
                          std::chrono::microseconds timeout,
-                         typename Parent::Task &&task) {
+                         typename Parent::Task &&task, typename Parent::Predicate &&pred) {
+      assert(tid != kExecuteInPool || !pred);
       if (is_disposed_.load())
         return;
 
       if (tid < kHandlersCount) {
+        pred ?
+        handlers_[tid].handler->repeat(timeout, std::move(task), std::move(pred)):
         handlers_[tid].handler->addDelayed(timeout, std::move(task));
         return;
       }
@@ -60,6 +63,8 @@ namespace iroha::subscription {
                   return it->second;
                 return std::nullopt;
               })) {
+        pred ?
+        context->handler->repeat(timeout, std::move(task), std::move(pred)):
         context->handler->addDelayed(timeout, std::move(task));
         return;
       }
@@ -103,13 +108,17 @@ namespace iroha::subscription {
     }
 
     void add(typename Parent::Tid tid, typename Parent::Task &&task) override {
-      uploadToHandler(tid, std::chrono::microseconds(0ull), std::move(task));
+      uploadToHandler(tid, std::chrono::microseconds(0ull), std::move(task), nullptr);
     }
 
     void addDelayed(typename Parent::Tid tid,
                     std::chrono::microseconds timeout,
                     typename Parent::Task &&task) override {
-      uploadToHandler(tid, timeout, std::move(task));
+      uploadToHandler(tid, timeout, std::move(task), nullptr);
+    }
+
+    void repeat(typename Parent::Tid tid, std::chrono::microseconds timeout, typename Parent::Task &&task, typename Parent::Predicate &&pred) override {
+      uploadToHandler(tid, timeout, std::move(task), std::move(pred));
     }
 
     std::optional<Tid> bind(std::shared_ptr<IScheduler> scheduler) override {
