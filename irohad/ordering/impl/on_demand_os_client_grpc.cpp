@@ -16,6 +16,37 @@
 using iroha::ordering::transport::OnDemandOsClientGrpc;
 using iroha::ordering::transport::OnDemandOsClientGrpcFactory;
 
+namespace {
+  void sendBatches(
+      iroha::ordering::proto::BatchesRequest request,
+      std::function<OnDemandOsClientGrpc::TimepointType()> time_provider,
+      std::weak_ptr<iroha::ordering::proto::OnDemandOrdering::StubInterface> wstub,
+      std::weak_ptr<logger::Logger> wlog) {
+    auto maybe_stub = wstub.lock();
+    auto maybe_log = wlog.lock();
+    if (not(maybe_stub and maybe_log)) {
+      return;
+    }
+    grpc::ClientContext context;
+    context.set_wait_for_ready(false);
+    context.set_deadline(time_provider() + std::chrono::seconds(5));
+    google::protobuf::Empty response;
+    maybe_log->info("Sending batches");
+    auto status = maybe_stub->SendBatches(&context, request, &response);
+    if (not status.ok()) {
+      maybe_log->warn(
+          "RPC failed: {} {}", context.peer(), status.error_message());
+      iroha::getSubscription()->dispatcher()->add(
+          iroha::getSubscription()->dispatcher()->kExecuteInPool,
+          [time_provider(time_provider), request(std::move(request)), stub(std::move(wstub)), log(std::move(wlog))] {
+            sendBatches(std::move(request), time_provider, std::move(stub), std::move(log));
+          });
+    } else {
+      maybe_log->info("RPC succeeded: {}", context.peer());
+    }
+  }
+}
+
 OnDemandOsClientGrpc::OnDemandOsClientGrpc(
     std::shared_ptr<proto::OnDemandOrdering::StubInterface> stub,
     std::shared_ptr<TransportFactoryType> proposal_factory,
@@ -42,27 +73,8 @@ void OnDemandOsClientGrpc::onBatches(CollectionType batches) {
 
   getSubscription()->dispatcher()->add(
       getSubscription()->dispatcher()->kExecuteInPool,
-      [time_provider(time_provider_),
-       request(std::move(request)),
-       stub(utils::make_weak(stub_)),
-       log(utils::make_weak(log_))] {
-        auto maybe_stub = stub.lock();
-        auto maybe_log = log.lock();
-        if (not(maybe_stub and maybe_log)) {
-          return;
-        }
-        grpc::ClientContext context;
-        context.set_wait_for_ready(true);
-        context.set_deadline(time_provider() + std::chrono::seconds(5));
-        google::protobuf::Empty response;
-        maybe_log->info("Sending batches");
-        auto status = maybe_stub->SendBatches(&context, request, &response);
-        if (not status.ok()) {
-          maybe_log->warn(
-              "RPC failed: {} {}", context.peer(), status.error_message());
-        } else {
-          maybe_log->info("RPC succeeded: {}", context.peer());
-        }
+      [time_provider(time_provider_), request(std::move(request)), stub(utils::make_weak(stub_)), log(utils::make_weak(log_))] {
+        sendBatches(std::move(request), time_provider, std::move(stub), std::move(log));
       });
 }
 
@@ -94,6 +106,7 @@ void OnDemandOsClientGrpc::onRequestProposal(consensus::Round round) {
         if (not(maybe_stub and maybe_log and maybe_proposal_factory)) {
           return;
         }
+        context->set_wait_for_ready(true);
         context->set_deadline(time_provider() + proposal_request_timeout);
         proto::ProposalResponse response;
         maybe_log->info("Requesting proposal");
