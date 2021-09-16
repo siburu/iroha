@@ -10,6 +10,7 @@
 
 #include "ametsuchi/impl/pool_wrapper.hpp"
 #include "ametsuchi/impl/rocksdb_storage_impl.hpp"
+#include "ametsuchi/impl/rocksdb_common.hpp"
 #include "ametsuchi/impl/storage_impl.hpp"
 #include "ametsuchi/impl/tx_presence_cache_impl.hpp"
 #include "ametsuchi/impl/wsv_restorer_impl.hpp"
@@ -207,6 +208,7 @@ Irohad::RunResult Irohad::dropStorage() {
 
 Irohad::RunResult Irohad::resetWsv() {
   storage.reset();
+  rdb_port_.reset();
   db_context_.reset();
 
   log_->info("Recreating schema.");
@@ -331,8 +333,9 @@ Irohad::RunResult Irohad::initStorage(
       cache->addCacheblePath(RDB_ROOT /**/ RDB_WSV /**/ RDB_ROLES);
       cache->addCacheblePath(RDB_ROOT /**/ RDB_WSV /**/ RDB_DOMAIN);
 
+      rdb_port_ = rdb_port;
       db_context_ = std::make_shared<ametsuchi::RocksDBContext>(
-          std::move(rdb_port), std::move(cache));
+          std::move(rdb_port));//, std::move(cache)
     } break;
 
     default:
@@ -340,6 +343,11 @@ Irohad::RunResult Irohad::initStorage(
           "Unexpected storage type!");
   }
   return storage_creator();
+}
+
+void Irohad::printDbStatus() {
+  if (rdb_port_ && log_)
+    rdb_port_->printStatus(*log_);
 }
 
 Irohad::RunResult Irohad::restoreWsv() {

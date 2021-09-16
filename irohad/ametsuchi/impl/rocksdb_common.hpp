@@ -14,6 +14,7 @@
 #include <fmt/compile.h>
 #include <fmt/format.h>
 #include <rocksdb/db.h>
+#include <rocksdb/table.h>
 #include <rocksdb/utilities/optimistic_transaction_db.h>
 #include <rocksdb/utilities/transaction.h>
 #include "ametsuchi/impl/database_cache/cache.hpp"
@@ -470,9 +471,17 @@ namespace iroha::ametsuchi {
         return {};
       }
 
+      rocksdb::BlockBasedTableOptions table_options;
+      table_options.block_cache = rocksdb::NewLRUCache(4 * 1024 * 1024 * 1024LL);
+      table_options.block_size = 32 * 1024;
+      //table_options.pin_l0_filter_and_index_blocks_in_cache = true;
+      table_options.cache_index_and_filter_blocks = true;
+
       rocksdb::Options options;
       options.create_if_missing = true;
-      options.max_open_files = 50;
+      //options.max_open_files = 50;
+      options.optimize_filters_for_hits = true;
+      options.table_factory.reset(rocksdb::NewBlockBasedTableFactory(table_options));
 
       rocksdb::OptimisticTransactionDB *transaction_db;
       auto status = rocksdb::OptimisticTransactionDB::Open(
@@ -487,6 +496,35 @@ namespace iroha::ametsuchi {
       transaction_db_.reset(transaction_db);
       db_name_ = db_name;
       return {};
+    }
+
+    template<typename LoggerT>
+    void printStatus(LoggerT &log) {
+      assert(transaction_db_);
+
+      auto read_property = [&](const rocksdb::Slice &property) {
+        uint64_t value;
+        transaction_db_->GetIntProperty(property, &value);
+        return value;
+      };
+
+      auto read_property_str = [&](const rocksdb::Slice &property) {
+        std::string value;
+        transaction_db_->GetProperty(property, &value);
+        return value;
+      };
+
+      log.info(
+          "[ROCKSDB MEMORY STATUS]\nrocksdb.block-cache-usage: {}\nrocksdb.block-cache-pinned-usage: {}\nrocksdb.estimate-table-readers-mem: {}\nrocksdb.cur-size-all-mem-tables: {}\nrocksdb.num-snapshots: {}\nrocksdb.total-sst-files-size: {}\nrocksdb.block-cache-capacity: {}\nrocksdb.stats: {}",
+          read_property("rocksdb.block-cache-usage"),
+          read_property("rocksdb.block-cache-pinned-usage"),
+          read_property("rocksdb.estimate-table-readers-mem"),
+          read_property("rocksdb.cur-size-all-mem-tables"),
+          read_property("rocksdb.num-snapshots"),
+          read_property("rocksdb.total-sst-files-size"),
+          read_property("rocksdb.block-cache-capacity"),
+          read_property_str("rocksdb.stats")
+          );
     }
 
    private:

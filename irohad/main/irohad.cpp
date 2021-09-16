@@ -15,7 +15,7 @@
 #include <thread>
 #include <unordered_map>
 
-//#include "profiling/memory_profiler.hpp"
+#include "profiling/memory_profiler.hpp"
 #include "ametsuchi/storage.hpp"
 #include "backend/protobuf/common_objects/proto_common_objects_factory.hpp"
 #include "common/bind.hpp"
@@ -212,7 +212,7 @@ getCommonObjectsFactory() {
 }
 
 int main(int argc, char *argv[]) {
-//  profiler::initTables();
+  profiler::initTables();
   gflags::SetVersionString(iroha::kGitPrettyVersion);
 
   // Parsing command line arguments
@@ -506,8 +506,9 @@ int main(int argc, char *argv[]) {
         break;
       }
     }
-//    profiler::printTables();
-//    std::abort();
+    irohad->printDbStatus();
+    profiler::printTables();
+    std::abort();
     daemon_status_notifier->notify(
         ::iroha::utility_service::Status::kTermination);
 
