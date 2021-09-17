@@ -116,7 +116,6 @@ target_link_libraries(irohad
     pg_connection_init
     rdb_connection_init
     maintenance
-    memory_profiler
     )
 
 add_library(iroha_conf_loader iroha_conf_loader.cpp)
