@@ -134,6 +134,7 @@ namespace profiler {
       return a->alloc_size > b->alloc_size;
     });
 
+    printf("[MEMORY PROFILER]\n");
     for (auto &item : descriptors) {
       snprintf(track,
                kBufferSize,
@@ -159,7 +160,7 @@ void *operator new(size_t size) {
   auto const ptr = malloc(size);
   if (table_ready.load()) {
     std::lock_guard lock(tables_cs);
-    static constexpr size_t kStackSize = 10;
+    static constexpr size_t kStackSize = 100;
 
     void *a[kStackSize];
     auto const s = backtrace(a, kStackSize);

@@ -8,6 +8,7 @@
 
 #include <charconv>
 #include <mutex>
+#include <iostream>
 #include <string>
 #include <string_view>
 
@@ -403,6 +404,22 @@ namespace iroha::ametsuchi {
       assert(db_port);
     }
 
+    ~RocksDBContext() {
+      std::cout << "RocksDBContext dctor\n";
+    }
+
+    template<typename LoggerT>
+    void printStatus(LoggerT &log) {
+      db_port->printStatus(log);
+    }
+
+    template<bool q>
+    void dropDB() {
+      std::lock_guard<std::recursive_mutex> context_guard(this_context_cs);
+      transaction.reset();
+      db_port->dropDB();
+    }
+
    private:
     friend class RocksDbCommon;
     friend struct RocksDBPort;
@@ -498,9 +515,17 @@ namespace iroha::ametsuchi {
       return {};
     }
 
+    ~RocksDBPort() {
+      std::cout << "RocksDBPort dctor\n";
+    }
+
+    void dropDB() {
+      transaction_db_.reset();
+    }
+
     template<typename LoggerT>
     void printStatus(LoggerT &log) {
-      assert(transaction_db_);
+      if(transaction_db_) {
 
       auto read_property = [&](const rocksdb::Slice &property) {
         uint64_t value;
@@ -525,6 +550,7 @@ namespace iroha::ametsuchi {
           read_property("rocksdb.block-cache-capacity"),
           read_property_str("rocksdb.stats")
           );
+    }
     }
 
    private:

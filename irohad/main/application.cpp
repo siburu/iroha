@@ -156,6 +156,8 @@ Irohad::Irohad(
 }
 
 Irohad::~Irohad() {
+  if (db_context_)
+    db_context_->printStatus(*log_);
   if (consensus_gate) {
     consensus_gate->stop();
   }
@@ -348,6 +350,10 @@ Irohad::RunResult Irohad::initStorage(
 void Irohad::printDbStatus() {
   if (rdb_port_ && log_)
     rdb_port_->printStatus(*log_);
+}
+
+void Irohad::dropDB() {
+  db_context_->dropDB<true>();
 }
 
 Irohad::RunResult Irohad::restoreWsv() {

@@ -36,7 +36,7 @@ inline static const char *TestParamInfoStorageTypeToString(
 
 #define INSTANTIATE_TEST_SUITE_P_DifferentStorageTypes(fixture) \
   INSTANTIATE_TEST_SUITE_P_DifferentStorageTypes_list(          \
-      fixture, testing::Values(StorageType::kPostgres, StorageType::kRocksDb))
+      fixture, testing::Values(StorageType::kRocksDb))
 
 #define INSTANTIATE_TEST_SUITE_P_DifferentStorageTypes_FROM_FIXTURE(fixture) \
   INSTANTIATE_TEST_SUITE_P_DifferentStorageTypes_list(fixture,               \
