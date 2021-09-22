@@ -161,8 +161,8 @@ TEST_P(TransferAsset, Basic) {
   profiler::printTables();
   itf.printDbStatus();
 
-  itf.dropDB();
-  profiler::printTables();
+//  itf.dropDB();
+//  profiler::printTables();
 
   getchar();
   std::abort();

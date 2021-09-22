@@ -480,7 +480,7 @@ namespace iroha::ametsuchi {
   struct RocksDBPort {
     RocksDBPort(RocksDBPort const &) = delete;
     RocksDBPort &operator=(RocksDBPort const &) = delete;
-    RocksDBPort() = default;
+    RocksDBPort() : commit_counter_(0) { }
 
     expected::Result<void, DbError> initialize(std::string const &db_name) {
       if (db_name_) {
@@ -554,9 +554,19 @@ namespace iroha::ametsuchi {
     }
 
    private:
+    uint32_t commit_counter_;
     std::unique_ptr<rocksdb::OptimisticTransactionDB> transaction_db_;
     std::optional<std::string> db_name_;
     friend class RocksDbCommon;
+
+    void registerCommit() {
+      if (((++commit_counter_) % 20000) == 0) {
+        std::cout << "<REGISTER COMMIT FLUSH>\n";
+        transaction_db_->Flush(rocksdb::FlushOptions(),
+                               transaction_db_->DefaultColumnFamily());
+        transaction_db_->FlushWAL(false);
+      }
+    }
 
     void prepareTransaction(RocksDBContext &tx_context) {
       assert(transaction_db_);
@@ -676,6 +686,7 @@ namespace iroha::ametsuchi {
         status = transaction()->Commit();
 
       transaction().reset();
+      tx_context_->db_port->registerCommit();
       return status;
     }
 
