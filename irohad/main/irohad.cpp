@@ -508,7 +508,7 @@ int main(int argc, char *argv[]) {
     }
     irohad->printDbStatus();
     //profiler::printTables();
-//    std::abort();
+    std::abort();
     daemon_status_notifier->notify(
         ::iroha::utility_service::Status::kTermination);
 
