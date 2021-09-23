@@ -38,7 +38,7 @@ namespace {
           "RPC failed: {} {}", context.peer(), status.error_message());
       iroha::getSubscription()->dispatcher()->add(
           iroha::getSubscription()->dispatcher()->kExecuteInPool,
-          [time_provider(time_provider), request(std::move(request)), stub(std::move(wstub)), log(std::move(wlog))] {
+          [time_provider(time_provider), request(std::move(request)), stub(std::move(wstub)), log(std::move(wlog))] () mutable {
             sendBatches(std::move(request), time_provider, std::move(stub), std::move(log));
           });
     } else {
@@ -73,7 +73,7 @@ void OnDemandOsClientGrpc::onBatches(CollectionType batches) {
 
   getSubscription()->dispatcher()->add(
       getSubscription()->dispatcher()->kExecuteInPool,
-      [time_provider(time_provider_), request(std::move(request)), stub(utils::make_weak(stub_)), log(utils::make_weak(log_))] {
+      [time_provider(time_provider_), request(std::move(request)), stub(utils::make_weak(stub_)), log(utils::make_weak(log_))] () mutable {
         sendBatches(std::move(request), time_provider, std::move(stub), std::move(log));
       });
 }
