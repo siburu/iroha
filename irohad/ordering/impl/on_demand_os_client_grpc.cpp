@@ -104,6 +104,7 @@ void OnDemandOsClientGrpc::onRequestProposal(consensus::Round round) {
         auto maybe_log = log.lock();
         auto maybe_proposal_factory = proposal_factory.lock();
         if (not(maybe_stub and maybe_log and maybe_proposal_factory)) {
+          callback({std::nullopt, round});
           return;
         }
         context->set_wait_for_ready(true);
@@ -129,6 +130,7 @@ void OnDemandOsClientGrpc::onRequestProposal(consensus::Round round) {
         if (expected::hasError(maybe_proposal)) {
           maybe_log->info("{}", maybe_proposal.assumeError().error);
           callback({std::nullopt, round});
+          return;
         }
         callback({std::move(maybe_proposal).assumeValue(), round});
       });
