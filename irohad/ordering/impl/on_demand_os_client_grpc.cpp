@@ -11,22 +11,24 @@
 #include "interfaces/iroha_internal/transaction_batch.hpp"
 #include "logger/logger.hpp"
 #include "main/subscription.hpp"
+#include "subscription/thread_handler.hpp"
 #include "network/impl/client_factory.hpp"
 
 using iroha::ordering::transport::OnDemandOsClientGrpc;
 using iroha::ordering::transport::OnDemandOsClientGrpcFactory;
 
 namespace {
-  void sendBatches(
+  bool sendBatches(
       iroha::ordering::proto::BatchesRequest request,
       std::function<OnDemandOsClientGrpc::TimepointType()> time_provider,
-      std::weak_ptr<iroha::ordering::proto::OnDemandOrdering::StubInterface> wstub,
+      std::weak_ptr<iroha::ordering::proto::OnDemandOrdering::StubInterface>
+          wstub,
       std::weak_ptr<logger::Logger> wlog) {
     auto maybe_stub = wstub.lock();
     auto maybe_log = wlog.lock();
-    if (not(maybe_stub and maybe_log)) {
-      return;
-    }
+    if (not(maybe_stub and maybe_log))
+      return true;
+
     grpc::ClientContext context;
     context.set_wait_for_ready(false);
     context.set_deadline(time_provider() + std::chrono::seconds(5));
@@ -36,14 +38,19 @@ namespace {
     if (not status.ok()) {
       maybe_log->warn(
           "RPC failed: {} {}", context.peer(), status.error_message());
-      iroha::getSubscription()->dispatcher()->add(
-          iroha::getSubscription()->dispatcher()->kExecuteInPool,
-          [time_provider(time_provider), request(std::move(request)), stub(std::move(wstub)), log(std::move(wlog))] () mutable {
-            sendBatches(std::move(request), time_provider, std::move(stub), std::move(log));
-          });
-    } else {
-      maybe_log->info("RPC succeeded: {}", context.peer());
+      return false;
     }
+
+    maybe_log->info("RPC succeeded: {}", context.peer());
+    return true;
+  }
+
+  static iroha::ordering::transport::OnDemandOsClientGrpc::DynamicEventType
+  nextEventValue() {
+    static std::atomic<
+        iroha::ordering::transport::OnDemandOsClientGrpc::DynamicEventType>
+        value(1000ul);
+    return ++value;
   }
 }
 
@@ -59,23 +66,66 @@ OnDemandOsClientGrpc::OnDemandOsClientGrpc(
       proposal_factory_(std::move(proposal_factory)),
       time_provider_(std::move(time_provider)),
       proposal_request_timeout_(proposal_request_timeout),
-      callback_(std::move(callback)) {}
+      callback_(std::move(callback)),
+      execution_tid_(0ul),
+      scheduler_(std::make_shared<subscription::ThreadHandler>()),
+      batches_event_key_(nextEventValue()),
+      batches_subscriber_(subscription::SubscriberImpl<DynamicEventType,
+          subscription::IDispatcher,
+          bool,
+          std::shared_ptr<proto::BatchesRequest>>::
+                          create(getSubscription()->getEngine<DynamicEventType, std::shared_ptr<proto::BatchesRequest>>(),
+                                 false)) {
+  auto execution_tid = getSubscription()->dispatcher()->bind(scheduler_);
+  assert(execution_tid);
+  execution_tid_ = *execution_tid;
+
+  assert(batches_event_key_ != 0ul);
+  batches_subscriber_->setCallback(
+      [batches_event_key(batches_event_key_), time_provider(time_provider_),
+       stub(utils::make_weak(stub_)),
+       log(utils::make_weak(log_))](
+          auto /*set_id*/,
+          auto &object,
+          auto event_key,
+          std::shared_ptr<proto::BatchesRequest> request) mutable {
+        assert(request);
+        if (!sendBatches(*request, time_provider, stub, log))
+          getSubscription()->notify(batches_event_key, request);
+      });
+
+  batches_subscriber_->subscribe(0, batches_event_key_, execution_tid_);
+}
+
+OnDemandOsClientGrpc::~OnDemandOsClientGrpc() {
+  if (auto sh_ctx = context_.lock())
+    sh_ctx->TryCancel();
+
+  batches_subscriber_->unsubscribe();
+  getSubscription()->dispatcher()->unbind(execution_tid_);
+  scheduler_->dispose(false);
+}
 
 void OnDemandOsClientGrpc::onBatches(CollectionType batches) {
-  proto::BatchesRequest request;
+  std::shared_ptr<proto::BatchesRequest> request;
   for (auto &batch : batches) {
+    if (!request)
+      request = std::make_shared<proto::BatchesRequest>();
+
     for (auto &transaction : batch->transactions()) {
-      *request.add_transactions() = std::move(
+      *(*request).add_transactions() = std::move(
           static_cast<shared_model::proto::Transaction *>(transaction.get())
               ->getTransport());
     }
+
+    if (request->ByteSizeLong() >= 2ull * 1024 * 1024) {
+      getSubscription()->notify(batches_event_key_, request);
+      request.reset();
+    }
   }
 
-  getSubscription()->dispatcher()->add(
-      getSubscription()->dispatcher()->kExecuteInPool,
-      [time_provider(time_provider_), request(std::move(request)), stub(utils::make_weak(stub_)), log(utils::make_weak(log_))] () mutable {
-        sendBatches(std::move(request), time_provider, std::move(stub), std::move(log));
-      });
+  if (request)
+    getSubscription()->notify(batches_event_key_, request);
 }
 
 void OnDemandOsClientGrpc::onRequestProposal(consensus::Round round) {

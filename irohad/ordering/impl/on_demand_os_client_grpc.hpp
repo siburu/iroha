@@ -8,7 +8,9 @@
 
 #include "ordering/on_demand_os_transport.hpp"
 
+#include "main/subscription.hpp"
 #include "common/result.hpp"
+#include "subscription/dispatcher.hpp"
 #include "interfaces/iroha_internal/abstract_transport_factory.hpp"
 #include "logger/logger_fwd.hpp"
 #include "ordering.grpc.pb.h"
@@ -33,6 +35,7 @@ namespace iroha {
                 iroha::protocol::Proposal>;
         using TimepointType = std::chrono::system_clock::time_point;
         using TimeoutType = std::chrono::milliseconds;
+        using DynamicEventType = uint64_t;
 
         /**
          * Constructor is left public because testing required passing a mock
@@ -46,10 +49,7 @@ namespace iroha {
             logger::LoggerPtr log,
             std::function<void(ProposalEvent)> callback);
 
-        ~OnDemandOsClientGrpc() override {
-          if (auto sh_ctx = context_.lock())
-            sh_ctx->TryCancel();
-        }
+        ~OnDemandOsClientGrpc() override;
 
         void onBatches(CollectionType batches) override;
 
@@ -63,6 +63,14 @@ namespace iroha {
         std::chrono::milliseconds proposal_request_timeout_;
         std::function<void(ProposalEvent)> callback_;
         std::weak_ptr<grpc::ClientContext> context_;
+        subscription::IDispatcher::Tid execution_tid_;
+        std::shared_ptr<subscription::IScheduler> scheduler_;
+        DynamicEventType batches_event_key_;
+        std::shared_ptr<subscription::SubscriberImpl<DynamicEventType,
+            subscription::IDispatcher,
+            bool,
+            std::shared_ptr<proto::BatchesRequest>>>
+            batches_subscriber_;
       };
 
       class OnDemandOsClientGrpcFactory : public OdOsNotificationFactory {
