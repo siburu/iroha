@@ -13,16 +13,19 @@
 #include "main/subscription.hpp"
 #include "subscription/thread_handler.hpp"
 #include "network/impl/client_factory.hpp"
+#include "ordering/impl/os_executor_keepers.hpp"
 
 using iroha::ordering::transport::OnDemandOsClientGrpc;
 using iroha::ordering::transport::OnDemandOsClientGrpcFactory;
 
 namespace {
   bool sendBatches(
+      std::string peer_name,
+      std::weak_ptr<iroha::ordering::ExecutorKeeper> os_execution_keepers,
       iroha::ordering::proto::BatchesRequest request,
       std::function<OnDemandOsClientGrpc::TimepointType()> time_provider,
       std::weak_ptr<iroha::ordering::proto::OnDemandOrdering::StubInterface>
-          wstub,
+      wstub,
       std::weak_ptr<logger::Logger> wlog) {
     auto maybe_stub = wstub.lock();
     auto maybe_log = wlog.lock();
@@ -38,6 +41,16 @@ namespace {
     if (not status.ok()) {
       maybe_log->warn(
           "RPC failed: {} {}", context.peer(), status.error_message());
+      if (auto ek = os_execution_keepers.lock()) {
+        ek->executeFor(
+            peer_name,
+            [peer_name, request(std::move(request)), os_execution_keepers,
+                time_provider(time_provider),
+                wstub,
+                wlog]() mutable {
+              sendBatches(std::move(peer_name), os_execution_keepers, std::move(request), time_provider, wstub, wlog);
+            });
+      }
       return false;
     }
 
@@ -60,14 +73,16 @@ OnDemandOsClientGrpc::OnDemandOsClientGrpc(
     std::function<TimepointType()> time_provider,
     std::chrono::milliseconds proposal_request_timeout,
     logger::LoggerPtr log,
-    std::function<void(ProposalEvent)> callback)
+    std::function<void(ProposalEvent)> callback,
+    std::shared_ptr<ExecutorKeeper> os_execution_keepers,
+    std::string peer_name)
     : log_(std::move(log)),
       stub_(std::move(stub)),
       proposal_factory_(std::move(proposal_factory)),
       time_provider_(std::move(time_provider)),
       proposal_request_timeout_(proposal_request_timeout),
       callback_(std::move(callback)),
-      execution_tid_(0ul),
+      /*execution_tid_(0ul),
       scheduler_(std::make_shared<subscription::ThreadHandler>()),
       batches_event_key_(nextEventValue()),
       batches_subscriber_(subscription::SubscriberImpl<DynamicEventType,
@@ -75,8 +90,12 @@ OnDemandOsClientGrpc::OnDemandOsClientGrpc(
           bool,
           std::shared_ptr<proto::BatchesRequest>>::
                           create(getSubscription()->getEngine<DynamicEventType, std::shared_ptr<proto::BatchesRequest>>(),
-                                 false)) {
-  auto execution_tid = getSubscription()->dispatcher()->bind(scheduler_);
+                                 false)),*/
+      os_execution_keepers_(std::move(os_execution_keepers)),
+      peer_name_(std::move(peer_name)) {
+  assert(os_execution_keepers_);
+
+  /*auto execution_tid = getSubscription()->dispatcher()->bind(scheduler_);
   assert(execution_tid);
   execution_tid_ = *execution_tid;
 
@@ -85,7 +104,7 @@ OnDemandOsClientGrpc::OnDemandOsClientGrpc(
       [batches_event_key(batches_event_key_), time_provider(time_provider_),
        stub(utils::make_weak(stub_)),
        log(utils::make_weak(log_))](
-          auto /*set_id*/,
+          auto set_id,
           auto &object,
           auto event_key,
           std::shared_ptr<proto::BatchesRequest> request) mutable {
@@ -94,16 +113,16 @@ OnDemandOsClientGrpc::OnDemandOsClientGrpc(
           getSubscription()->notify(batches_event_key, request);
       });
 
-  batches_subscriber_->subscribe(0, batches_event_key_, execution_tid_);
+  batches_subscriber_->subscribe(0, batches_event_key_, execution_tid_);*/
 }
 
 OnDemandOsClientGrpc::~OnDemandOsClientGrpc() {
   if (auto sh_ctx = context_.lock())
     sh_ctx->TryCancel();
 
-  batches_subscriber_->unsubscribe();
+  /*batches_subscriber_->unsubscribe();
   getSubscription()->dispatcher()->unbind(execution_tid_);
-  scheduler_->dispose(false);
+  scheduler_->dispose(false);*/
 }
 
 void OnDemandOsClientGrpc::onBatches(CollectionType batches) {
@@ -119,13 +138,42 @@ void OnDemandOsClientGrpc::onBatches(CollectionType batches) {
     }
 
     if (request->ByteSizeLong() >= 2ull * 1024 * 1024) {
-      getSubscription()->notify(batches_event_key_, request);
+      os_execution_keepers_->executeFor(
+          peer_name_,
+          [peer_name(peer_name_),
+           request(std::move(*request)),
+           wos_execution_keepers(utils::make_weak(os_execution_keepers_)),
+           time_provider(time_provider_),
+           stub(utils::make_weak(stub_)),
+           log(utils::make_weak(log_))]() mutable {
+            sendBatches(std::move(peer_name),
+                        wos_execution_keepers,
+                        std::move(request),
+                        time_provider,
+                        stub,
+                        log);
+          });
       request.reset();
     }
   }
 
-  if (request)
-    getSubscription()->notify(batches_event_key_, request);
+  if (request) {
+    os_execution_keepers_->executeFor(
+        peer_name_,
+        [peer_name(peer_name_),
+         request(std::move(*request)),
+         wos_execution_keepers(utils::make_weak(os_execution_keepers_)),
+         time_provider(time_provider_),
+         stub(utils::make_weak(stub_)),
+         log(utils::make_weak(log_))]() mutable {
+          sendBatches(std::move(peer_name),
+                      wos_execution_keepers,
+                      std::move(request),
+                      time_provider,
+                      stub,
+                      log);
+        });
+  }
 }
 
 void OnDemandOsClientGrpc::onRequestProposal(consensus::Round round) {
@@ -191,13 +239,17 @@ OnDemandOsClientGrpcFactory::OnDemandOsClientGrpcFactory(
     OnDemandOsClientGrpc::TimeoutType proposal_request_timeout,
     logger::LoggerPtr client_log,
     std::unique_ptr<ClientFactory> client_factory,
-    std::function<void(ProposalEvent)> callback)
+    std::function<void(ProposalEvent)> callback,
+    std::shared_ptr<ExecutorKeeper> os_execution_keepers)
     : proposal_factory_(std::move(proposal_factory)),
       time_provider_(time_provider),
       proposal_request_timeout_(proposal_request_timeout),
       client_log_(std::move(client_log)),
       client_factory_(std::move(client_factory)),
-      callback_(callback) {}
+      callback_(callback),
+      os_execution_keepers_(std::move(os_execution_keepers)) {
+  assert(os_execution_keepers_);
+}
 
 iroha::expected::Result<
     std::unique_ptr<iroha::ordering::transport::OdOsNotification>,
@@ -210,6 +262,7 @@ OnDemandOsClientGrpcFactory::create(const shared_model::interface::Peer &to) {
                                                   time_provider_,
                                                   proposal_request_timeout_,
                                                   client_log_,
-                                                  callback_);
+                                                  callback_,
+                                                  os_execution_keepers_, to.pubkey());
   };
 }
