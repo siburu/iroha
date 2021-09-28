@@ -41,7 +41,7 @@ namespace {
     if (not status.ok()) {
       maybe_log->warn(
           "RPC failed: {} {}", context.peer(), status.error_message());
-      if (auto ek = os_execution_keepers.lock()) {
+      /*if (auto ek = os_execution_keepers.lock()) {
         ek->executeFor(
             peer_name,
             [peer_name, request(std::move(request)), os_execution_keepers,
@@ -50,7 +50,7 @@ namespace {
                 wlog]() mutable {
               sendBatches(std::move(peer_name), os_execution_keepers, std::move(request), time_provider, wstub, wlog);
             });
-      }
+      }*/
       return false;
     }
 
