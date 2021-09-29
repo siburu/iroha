@@ -355,7 +355,6 @@ class Irohad {
   // block cache for consensus and block loader
   std::shared_ptr<iroha::consensus::ConsensusResultCache>
       consensus_result_cache_;
-  std::shared_ptr<iroha::ametsuchi::RocksDBPort> rdb_port_;
 
   // block loader
   std::shared_ptr<iroha::network::BlockLoader> block_loader;

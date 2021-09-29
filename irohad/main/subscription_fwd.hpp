@@ -14,6 +14,7 @@ namespace iroha {
     kRequestProposal,
     kVoteProcess,
     kMetrics,
+    kDbStorageReinit,
     //---------------
     kTotalCount
   };

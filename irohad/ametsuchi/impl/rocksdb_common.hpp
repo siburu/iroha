@@ -408,18 +408,6 @@ namespace iroha::ametsuchi {
       std::cout << "RocksDBContext dctor\n";
     }
 
-    template<typename LoggerT>
-    void printStatus(LoggerT &log) {
-      db_port->printStatus(log);
-    }
-
-    template<bool q>
-    void dropDB() {
-      std::lock_guard<std::recursive_mutex> context_guard(this_context_cs);
-      transaction.reset();
-      db_port->dropDB();
-    }
-
    private:
     friend class RocksDbCommon;
     friend struct RocksDBPort;
@@ -483,10 +471,17 @@ namespace iroha::ametsuchi {
     RocksDBPort() : commit_counter_(0) { }
 
     expected::Result<void, DbError> initialize(std::string const &db_name) {
-      if (db_name_) {
-        assert(*db_name_ == db_name);
-        return {};
-      }
+      db_name_ = db_name;
+      return reinitDB();
+    }
+
+    ~RocksDBPort() {
+      std::cout << "RocksDBPort dctor\n";
+    }
+
+   private:
+    expected::Result<void, DbError> reinitDB() {
+      assert(db_name_);
 
       rocksdb::BlockBasedTableOptions table_options;
       table_options.block_cache = rocksdb::NewLRUCache(4 * 1024 * 1024 * 1024LL);
@@ -502,25 +497,16 @@ namespace iroha::ametsuchi {
 
       rocksdb::OptimisticTransactionDB *transaction_db;
       auto status = rocksdb::OptimisticTransactionDB::Open(
-          options, db_name, &transaction_db);
+          options, *db_name_, &transaction_db);
 
       if (!status.ok())
         return makeError<void>(DbErrorCode::kInitializeFailed,
                                "Db {} initialization failed with status: {}.",
-                               db_name,
+                               *db_name_,
                                status.ToString());
 
       transaction_db_.reset(transaction_db);
-      db_name_ = db_name;
       return {};
-    }
-
-    ~RocksDBPort() {
-      std::cout << "RocksDBPort dctor\n";
-    }
-
-    void dropDB() {
-      transaction_db_.reset();
     }
 
     template<typename LoggerT>
@@ -679,6 +665,16 @@ namespace iroha::ametsuchi {
     }
 
    public:
+    template<typename LoggerT>
+    void printStatus(LoggerT &log) {
+      tx_context_->db_port->printStatus(log);
+    }
+
+    void dropDB() {
+      transaction().reset();
+      tx_context_->db_port->reinitDB();
+    }
+
     /// Makes commit to DB
     auto commit() {
       rocksdb::Status status;

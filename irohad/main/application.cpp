@@ -156,8 +156,11 @@ Irohad::Irohad(
 }
 
 Irohad::~Irohad() {
-  if (db_context_)
-    db_context_->printStatus(*log_);
+  if (db_context_ && log_) {
+    RocksDbCommon common(db_context_);
+    common.printStatus(*log_);
+  }
+
   if (consensus_gate) {
     consensus_gate->stop();
   }
@@ -210,7 +213,6 @@ Irohad::RunResult Irohad::dropStorage() {
 
 Irohad::RunResult Irohad::resetWsv() {
   storage.reset();
-  rdb_port_.reset();
   db_context_.reset();
 
   log_->info("Recreating schema.");
@@ -297,14 +299,14 @@ Irohad::RunResult Irohad::initStorage(
                                process_block,
                                log_manager_->getChild("Storage"))
         : type == StorageType::kRocksDb
-            ? ::iroha::initStorage(db_context_,
-                                   pending_txs_storage_,
-                                   query_response_factory_,
-                                   config_.block_store_path,
-                                   vm_caller_ref,
-                                   process_block,
-                                   log_manager_->getChild("Storage"))
-            : iroha::expected::makeError("Unexpected storage type.");
+        ? ::iroha::initStorage(db_context_,
+                               pending_txs_storage_,
+                               query_response_factory_,
+                               config_.block_store_path,
+                               vm_caller_ref,
+                               process_block,
+                               log_manager_->getChild("Storage"))
+        : iroha::expected::makeError("Unexpected storage type.");
 
     return st | [&](auto &&v) -> RunResult {
       storage = std::move(v);
@@ -335,9 +337,19 @@ Irohad::RunResult Irohad::initStorage(
       cache->addCacheblePath(RDB_ROOT /**/ RDB_WSV /**/ RDB_ROLES);
       cache->addCacheblePath(RDB_ROOT /**/ RDB_WSV /**/ RDB_DOMAIN);
 
-      rdb_port_ = rdb_port;
       db_context_ = std::make_shared<ametsuchi::RocksDBContext>(
-          std::move(rdb_port));//, std::move(cache)
+          std::move(rdb_port));  //, std::move(cache)
+
+      getSubscription()->dispatcher()->repeat(
+          SubscriptionEngineHandlers::kDbStorageReinit,
+          std::chrono::hours(1),
+          [wdb_context(utils::make_weak(db_context_))]() mutable {
+            if (auto db_context = wdb_context.lock()) {
+              RocksDbCommon common(db_context);
+              common.dropDB();
+            }
+          },
+          [wdb_context(utils::make_weak(db_context_))]() { return !wdb_context.expired(); });
     } break;
 
     default:
@@ -348,12 +360,17 @@ Irohad::RunResult Irohad::initStorage(
 }
 
 void Irohad::printDbStatus() {
-  if (rdb_port_ && log_)
-    rdb_port_->printStatus(*log_);
+  if (db_context_ && log_) {
+    RocksDbCommon common(db_context_);
+    common.printStatus(*log_);
+  }
 }
 
 void Irohad::dropDB() {
-  db_context_->dropDB<true>();
+  if (db_context_) {
+    RocksDbCommon common(db_context_);
+    common.dropDB();
+  }
 }
 
 Irohad::RunResult Irohad::restoreWsv() {
