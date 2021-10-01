@@ -20,7 +20,23 @@ namespace iroha::ametsuchi {
 
   std::optional<int32_t> RocksDbBlockQuery::getTxStatus(
       const shared_model::crypto::Hash &hash) {
-    return 1;
+    int res = -1;
+    RocksDbCommon common(db_context_);
+
+    if (auto status =
+            forTransactionStatus<kDbOperation::kGet, kDbEntry::kCanExist>(
+                common, hash);
+        expected::hasError(status)) {
+      log_->error("Failed to execute query: {}, code: {}",
+                  status.assumeError().description,
+                  status.assumeError().code);
+      return std::nullopt;
+    } else if (status.assumeValue()) {
+      auto const &[tx_status] = staticSplitId<1ull>(*status.assumeValue(), "#");
+      res = tx_status == "TRUE" ? 1 : 0;
+    }
+
+    return res;
   }
 
 }  // namespace iroha::ametsuchi
