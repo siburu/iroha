@@ -41,7 +41,7 @@ namespace iroha::ametsuchi {
         FunctionType function) const override;
 
    private:
-    using StorageType = InMemoryFrame<shared_model::interface::types::HeightType, shared_model::interface::types::JsonType, 1000>;
+    using StorageType = InMemoryFrame<shared_model::interface::types::HeightType, shared_model::interface::types::JsonType, 100>;
 
     std::shared_ptr<RocksDBContext> db_context_;
     std::shared_ptr<shared_model::interface::BlockJsonConverter>
