@@ -484,14 +484,13 @@ namespace iroha::ametsuchi {
       assert(db_name_);
 
       rocksdb::BlockBasedTableOptions table_options;
-      table_options.block_cache = rocksdb::NewLRUCache(2 * 1024 * 1024 * 1024LL);
+      table_options.block_cache = rocksdb::NewLRUCache(1 * 1024 * 1024 * 1024LL);
       table_options.block_size = 32 * 1024;
       //table_options.pin_l0_filter_and_index_blocks_in_cache = true;
       table_options.cache_index_and_filter_blocks = true;
 
       rocksdb::Options options;
       options.create_if_missing = true;
-      //options.max_open_files = 50;
       options.optimize_filters_for_hits = true;
       options.table_factory.reset(rocksdb::NewBlockBasedTableFactory(table_options));
 
@@ -765,6 +764,9 @@ namespace iroha::ametsuchi {
              })) {
         return rocksdb::Status();
       }
+
+      rocksdb::ReadOptions ro;
+      ro.fill_cache = false;
 
       auto status =
           transaction()->Get(rocksdb::ReadOptions(), slice, &valueBuffer());
