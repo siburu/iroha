@@ -769,7 +769,7 @@ namespace iroha::ametsuchi {
       ro.fill_cache = false;
 
       auto status =
-          transaction()->Get(rocksdb::ReadOptions(), slice, &valueBuffer());
+          transaction()->Get(ro, slice, &valueBuffer());
       if (status.ok())
         storeInCache(slice.ToStringView());
 
@@ -810,8 +810,11 @@ namespace iroha::ametsuchi {
       keyBuffer().clear();
       fmt::format_to(keyBuffer(), fmtstring, std::forward<Args>(args)...);
 
+      rocksdb::ReadOptions ro;
+      ro.fill_cache = false;
+
       std::unique_ptr<rocksdb::Iterator> it(
-          transaction()->GetIterator(rocksdb::ReadOptions()));
+          transaction()->GetIterator(ro));
       it->Seek(rocksdb::Slice(keyBuffer().data(), keyBuffer().size()));
 
       return it;
