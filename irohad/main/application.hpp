@@ -169,7 +169,6 @@ class Irohad {
   RunResult resetWsv();
 
   void printDbStatus();
-  void dropDB();
 
   /**
    * Run worker threads for start performing

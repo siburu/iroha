@@ -544,15 +544,6 @@ namespace iroha::ametsuchi {
     std::optional<std::string> db_name_;
     friend class RocksDbCommon;
 
-    void registerCommit() {
-      if (((++commit_counter_) % 20000) == 0) {
-        std::cout << "<REGISTER COMMIT FLUSH>\n";
-        transaction_db_->Flush(rocksdb::FlushOptions(),
-                               transaction_db_->DefaultColumnFamily());
-        transaction_db_->FlushWAL(false);
-      }
-    }
-
     void prepareTransaction(RocksDBContext &tx_context) {
       assert(transaction_db_);
       tx_context.transaction.reset(
@@ -669,11 +660,6 @@ namespace iroha::ametsuchi {
       tx_context_->db_port->printStatus(log);
     }
 
-    void dropDB() {
-      transaction().reset();
-      tx_context_->db_port->reinitDB();
-    }
-
     /// Makes commit to DB
     auto commit() {
       rocksdb::Status status;
@@ -681,7 +667,6 @@ namespace iroha::ametsuchi {
         status = transaction()->Commit();
 
       transaction().reset();
-      tx_context_->db_port->registerCommit();
       return status;
     }
 

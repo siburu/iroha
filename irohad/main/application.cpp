@@ -339,17 +339,6 @@ Irohad::RunResult Irohad::initStorage(
 
       db_context_ = std::make_shared<ametsuchi::RocksDBContext>(
           std::move(rdb_port));  //, std::move(cache)
-
-      getSubscription()->dispatcher()->repeat(
-          SubscriptionEngineHandlers::kDbStorageReinit,
-          std::chrono::hours(1),
-          [wdb_context(utils::make_weak(db_context_))]() mutable {
-            if (auto db_context = wdb_context.lock()) {
-              RocksDbCommon common(db_context);
-              common.dropDB();
-            }
-          },
-          [wdb_context(utils::make_weak(db_context_))]() { return !wdb_context.expired(); });
     } break;
 
     default:
@@ -363,13 +352,6 @@ void Irohad::printDbStatus() {
   if (db_context_ && log_) {
     RocksDbCommon common(db_context_);
     common.printStatus(*log_);
-  }
-}
-
-void Irohad::dropDB() {
-  if (db_context_) {
-    RocksDbCommon common(db_context_);
-    common.dropDB();
   }
 }
 
