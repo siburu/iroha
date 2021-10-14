@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <optional>
 
+#include "common/common.hpp"
 #include "common/ring_buffer.hpp"
 
 namespace iroha::ametsuchi {
