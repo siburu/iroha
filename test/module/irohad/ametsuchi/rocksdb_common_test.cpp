@@ -5,9 +5,6 @@
 #include <gtest/gtest.h>
 #include <boost/filesystem.hpp>
 #include <iostream>
-#include <chrono>
-#include <thread>
-#include <profiling/memory_profiler.hpp>
 
 #include "ametsuchi/impl/database_cache/cache.hpp"
 #include "ametsuchi/impl/rocksdb_common.hpp"

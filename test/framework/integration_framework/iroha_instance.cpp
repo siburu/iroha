@@ -92,10 +92,6 @@ namespace integration_framework {
     test_irohad_->printDbStatus();
   }
 
-  void IrohaInstance::dropDB() {
-    test_irohad_->dropDB();
-  }
-
   void IrohaInstance::initPipeline(
       const shared_model::crypto::Keypair &key_pair, size_t max_proposal_size) {
     config_.max_proposal_size = max_proposal_size;

@@ -332,10 +332,6 @@ void IntegrationTestFramework::printDbStatus() {
   iroha_instance_->printDbStatus();
 }
 
-void IntegrationTestFramework::dropDB() {
-  iroha_instance_->dropDB();
-}
-
 shared_model::proto::Block IntegrationTestFramework::defaultBlock(
     const shared_model::crypto::Keypair &key) const {
   shared_model::interface::RolePermissionSet all_perms{};

@@ -10,12 +10,9 @@
 
 #include "interfaces/iroha_internal/block_json_converter.hpp"
 #include "logger/logger_fwd.hpp"
-#include "common/common.hpp"
 
 namespace iroha::ametsuchi {
   struct RocksDBContext;
-  template <typename KeyT, typename ValueT, size_t kCount>
-  class InMemoryFrame;
 
   class RocksDbBlockStorage : public BlockStorage {
    public:
@@ -41,12 +38,9 @@ namespace iroha::ametsuchi {
         FunctionType function) const override;
 
    private:
-    using StorageType = InMemoryFrame<shared_model::interface::types::HeightType, shared_model::interface::types::JsonType, 100>;
-
     std::shared_ptr<RocksDBContext> db_context_;
     std::shared_ptr<shared_model::interface::BlockJsonConverter>
         json_converter_;
-    utils::ReadWriteObject<std::shared_ptr<StorageType>> storage_;
     logger::LoggerPtr log_;
   };
 

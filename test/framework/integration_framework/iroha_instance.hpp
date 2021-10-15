@@ -69,7 +69,6 @@ namespace integration_framework {
     void run();
 
     void printDbStatus();
-    void dropDB();
 
     std::shared_ptr<TestIrohad> &getTestIrohad();
 

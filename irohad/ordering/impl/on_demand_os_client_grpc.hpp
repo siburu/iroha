@@ -67,14 +67,6 @@ namespace iroha {
         std::chrono::milliseconds proposal_request_timeout_;
         std::function<void(ProposalEvent)> callback_;
         std::weak_ptr<grpc::ClientContext> context_;
-        //subscription::IDispatcher::Tid execution_tid_;
-        //std::shared_ptr<subscription::IScheduler> scheduler_;
-        //DynamicEventType batches_event_key_;
-        /*std::shared_ptr<subscription::SubscriberImpl<DynamicEventType,
-            subscription::IDispatcher,
-            bool,
-            std::shared_ptr<proto::BatchesRequest>>>
-            batches_subscriber_;*/
         std::shared_ptr<ExecutorKeeper> os_execution_keepers_;
         std::string peer_name_;
       };

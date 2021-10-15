@@ -41,6 +41,7 @@ namespace {
     if (not status.ok()) {
       maybe_log->warn(
           "RPC failed: {} {}", context.peer(), status.error_message());
+      /// TODO(iceseer): uncomment if we need resend. Maybe add repeat counter.
       /*if (auto ek = os_execution_keepers.lock()) {
         ek->executeFor(
             peer_name,
@@ -56,14 +57,6 @@ namespace {
 
     maybe_log->info("RPC succeeded: {}", context.peer());
     return true;
-  }
-
-  static iroha::ordering::transport::OnDemandOsClientGrpc::DynamicEventType
-  nextEventValue() {
-    static std::atomic<
-        iroha::ordering::transport::OnDemandOsClientGrpc::DynamicEventType>
-        value(1000ul);
-    return ++value;
   }
 }
 
@@ -82,47 +75,14 @@ OnDemandOsClientGrpc::OnDemandOsClientGrpc(
       time_provider_(std::move(time_provider)),
       proposal_request_timeout_(proposal_request_timeout),
       callback_(std::move(callback)),
-      /*execution_tid_(0ul),
-      scheduler_(std::make_shared<subscription::ThreadHandler>()),
-      batches_event_key_(nextEventValue()),
-      batches_subscriber_(subscription::SubscriberImpl<DynamicEventType,
-          subscription::IDispatcher,
-          bool,
-          std::shared_ptr<proto::BatchesRequest>>::
-                          create(getSubscription()->getEngine<DynamicEventType, std::shared_ptr<proto::BatchesRequest>>(),
-                                 false)),*/
       os_execution_keepers_(std::move(os_execution_keepers)),
       peer_name_(std::move(peer_name)) {
   assert(os_execution_keepers_);
-
-  /*auto execution_tid = getSubscription()->dispatcher()->bind(scheduler_);
-  assert(execution_tid);
-  execution_tid_ = *execution_tid;
-
-  assert(batches_event_key_ != 0ul);
-  batches_subscriber_->setCallback(
-      [batches_event_key(batches_event_key_), time_provider(time_provider_),
-       stub(utils::make_weak(stub_)),
-       log(utils::make_weak(log_))](
-          auto set_id,
-          auto &object,
-          auto event_key,
-          std::shared_ptr<proto::BatchesRequest> request) mutable {
-        assert(request);
-        if (!sendBatches(*request, time_provider, stub, log))
-          getSubscription()->notify(batches_event_key, request);
-      });
-
-  batches_subscriber_->subscribe(0, batches_event_key_, execution_tid_);*/
 }
 
 OnDemandOsClientGrpc::~OnDemandOsClientGrpc() {
   if (auto sh_ctx = context_.lock())
     sh_ctx->TryCancel();
-
-  /*batches_subscriber_->unsubscribe();
-  getSubscription()->dispatcher()->unbind(execution_tid_);
-  scheduler_->dispose(false);*/
 }
 
 void OnDemandOsClientGrpc::onBatches(CollectionType batches) {

@@ -8,7 +8,6 @@
 
 #include <charconv>
 #include <mutex>
-#include <iostream>
 #include <string>
 #include <string_view>
 
@@ -404,10 +403,6 @@ namespace iroha::ametsuchi {
       assert(db_port);
     }
 
-    ~RocksDBContext() {
-      std::cout << "RocksDBContext dctor\n";
-    }
-
    private:
     friend class RocksDbCommon;
     friend struct RocksDBPort;
@@ -468,15 +463,11 @@ namespace iroha::ametsuchi {
   struct RocksDBPort {
     RocksDBPort(RocksDBPort const &) = delete;
     RocksDBPort &operator=(RocksDBPort const &) = delete;
-    RocksDBPort() : commit_counter_(0) { }
+    RocksDBPort() = default;
 
     expected::Result<void, DbError> initialize(std::string const &db_name) {
       db_name_ = db_name;
       return reinitDB();
-    }
-
-    ~RocksDBPort() {
-      std::cout << "RocksDBPort dctor\n";
     }
 
    private:
@@ -539,7 +530,6 @@ namespace iroha::ametsuchi {
     }
 
    private:
-    uint32_t commit_counter_;
     std::unique_ptr<rocksdb::OptimisticTransactionDB> transaction_db_;
     std::optional<std::string> db_name_;
     friend class RocksDbCommon;

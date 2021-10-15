@@ -6,7 +6,6 @@
 #include "consensus/yac/yac.hpp"
 
 #include <utility>
-#include <iostream>
 
 #include <boost/algorithm/string/join.hpp>
 #include <boost/range/adaptor/transformed.hpp>
@@ -76,7 +75,6 @@ std::optional<iroha::consensus::yac::Answer> Yac::processRoundSwitch(
     ++it;
   }
   future_states_.erase(future_states_.begin(), it);
-      std::cout << fmt::format("[TRACE TAG] Future states become {} after insertion.\n", future_states_.size());
   return result;
 }
 
@@ -148,8 +146,6 @@ std::optional<iroha::consensus::yac::Answer> Yac::onState(
     if (proposal_round.block_round > round_.block_round) {
       log_->info("Pass state from future for {} to pipeline", proposal_round);
       future_states_[proposal_round].insert(state.begin(), state.end());
-      std::cout << fmt::format("[TRACE TAG] Future states become {} after insertion.\n", future_states_.size());
-
       return FutureMessage{std::move(state)};
     }
 

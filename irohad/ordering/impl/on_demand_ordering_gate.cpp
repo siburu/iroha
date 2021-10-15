@@ -69,7 +69,7 @@ void OnDemandOrderingGate::processRoundSwitch(RoundSwitch const &event) {
   // notify our ordering service about new round
   ordering_service_->onCollaborationOutcome(event.next_round);
 
-  //this->sendCachedTransactions();
+  this->sendCachedTransactions();
 
   // request proposal for the current round
   network_client_->onRequestProposal(event.next_round);

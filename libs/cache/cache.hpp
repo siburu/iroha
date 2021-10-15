@@ -25,7 +25,7 @@ namespace iroha {
     template <typename KeyType,
               typename ValueType,
               typename KeyHash = std::hash<KeyType>,
-              size_t Count = 10ull>
+              size_t Count = 20000ull>
     class Cache final
         : public AbstractCache<KeyType,
                                ValueType,

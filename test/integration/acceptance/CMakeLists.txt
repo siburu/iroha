@@ -75,8 +75,6 @@ addtest(transfer_asset_test transfer_asset_test.cpp)
 target_link_libraries(transfer_asset_test
     acceptance_fixture
     integration_framework
-    memory_profiler
-    shared_model_interfaces
     )
 
 addtest(tx_acceptance_test tx_acceptance_test.cpp)
