@@ -60,8 +60,8 @@ namespace iroha::utils {
    * @endcode
    */
   // clang-format on
-  template <typename T>
-  struct ReadWriteObject {
+template <typename T, typename M = std::shared_mutex>
+struct ReadWriteObject {
     template <typename... Args>
     ReadWriteObject(Args &&... args) : t_(std::forward<Args>(args)...) {}
 
@@ -77,10 +77,10 @@ namespace iroha::utils {
       return std::forward<F>(f)(t_);
     }
 
-   private:
+private:
     T t_;
-    mutable std::shared_mutex cs_;
-  };
+    mutable M cs_;
+};
 
   class WaitForSingleObject final : NoMove, NoCopy {
     std::condition_variable wait_cv_;
