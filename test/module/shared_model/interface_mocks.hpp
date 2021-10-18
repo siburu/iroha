@@ -72,6 +72,9 @@ struct MockTransaction : public shared_model::interface::Transaction {
       batchMeta,
       std::optional<std::shared_ptr<shared_model::interface::BatchMeta>>());
   MOCK_METHOD0(moveTo, std::unique_ptr<Transaction>());
+
+  MOCK_CONST_METHOD0(getBatchIndex, shared_model::interface::types::BatchIndex());
+  MOCK_METHOD1(setBatchIndex, void (shared_model::interface::types::BatchIndex));
 };
 
 /**

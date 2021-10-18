@@ -9,6 +9,7 @@
 #include "backend/protobuf/proposal.hpp"
 #include "backend/protobuf/proto_transport_factory.hpp"
 #include "backend/protobuf/transaction.hpp"
+#include "ordering/impl/os_executor_keepers.hpp"
 #include "framework/mock_stream.h"
 #include "framework/test_logger.hpp"
 #include "interfaces/iroha_internal/proposal.hpp"
@@ -50,13 +51,30 @@ class OnDemandOsClientGrpcTest : public ::testing::Test {
     proto_proposal_validator = proto_validator.get();
     proposal_factory = std::make_shared<ProtoProposalTransportFactory>(
         std::move(validator), std::move(proto_validator));
+    auto exec_keeper = std::make_shared<ExecutorKeeper>();
+
+    struct Peer {
+      std::string pk;
+      Peer(std::string_view p) : pk(p) {
+
+      }
+      std::string &pubkey() {
+        return pk;
+      }
+    };
+
+    std::shared_ptr<Peer> pk[] = {
+        std::make_shared<Peer>("123")
+    };
+    exec_keeper->syncronize(&pk[0], &pk[1]);
+
     client = std::make_shared<OnDemandOsClientGrpc>(
         std::move(ustub),
         proposal_factory,
         [&] { return timepoint; },
         timeout,
         getTestLogger("OdOsClientGrpc"),
-        [this](ProposalEvent event) { received_event = event; });
+        [this](ProposalEvent event) { received_event = event; }, exec_keeper, "123");
   }
 
   proto::MockOnDemandOrderingStub *stub;
