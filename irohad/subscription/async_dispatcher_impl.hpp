@@ -8,6 +8,8 @@
 
 #include "subscription/dispatcher.hpp"
 
+#include <atomic>
+
 #include "common/common.hpp"
 #include "subscription/thread_handler.hpp"
 

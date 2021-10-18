@@ -9,6 +9,7 @@
 #include "interfaces/iroha_internal/proposal_factory.hpp"
 #include "interfaces/iroha_internal/unsafe_proposal_factory.hpp"
 #include "validators/validators_common.hpp"
+#include "interfaces/common_objects/types.hpp"
 
 #include "backend/protobuf/proposal.hpp"
 #include "backend/protobuf/transaction.hpp"
@@ -64,10 +65,15 @@ namespace shared_model {
         proposal.set_height(height);
         proposal.set_created_time(created_time);
 
+        std::optional<interface::types::BatchIndex> prev_index;
         for (const auto &tx : transactions) {
+          if (proposal.ByteSizeLong() >= (2 * 1024 * 1024ull) && prev_index && *prev_index != tx.getBatchIndex())
+            break;
+
           *proposal.add_transactions() =
               static_cast<const shared_model::proto::Transaction &>(tx)
                   .getTransport();
+          prev_index = tx.getBatchIndex();
         }
 
         return proposal;

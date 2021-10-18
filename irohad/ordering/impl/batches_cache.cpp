@@ -123,6 +123,7 @@ namespace iroha::ordering {
 
     std::unique_lock lock(batches_cache_cs_);
     uint32_t depth_counter = 0ul;
+    uint64_t batch_counter = 0ull;
     batches_cache_.remove([&](auto &batch, bool &process_iteration) {
       auto const txs_count = batch->transactions().size();
       if (collection.size() + txs_count > requested_tx_amount) {
@@ -131,11 +132,13 @@ namespace iroha::ordering {
         return false;
       }
 
-      collection.insert(std::end(collection),
-                        std::begin(batch->transactions()),
-                        std::end(batch->transactions()));
+      for (auto &it : batch->transactions()) {
+        it->setBatchIndex(batch_counter);
+        collection.template emplace_back(it);
+      }
 
       used_batches_cache_.insert(batch);
+      ++batch_counter;
       return true;
     });
   }

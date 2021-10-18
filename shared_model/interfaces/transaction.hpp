@@ -59,6 +59,16 @@ namespace shared_model {
        */
       virtual std::unique_ptr<Transaction> moveTo() = 0;
 
+      /**
+       * @return Batch index of the transaction.
+       */
+      virtual types::BatchIndex getBatchIndex() const = 0;
+
+      /**
+       * @return store batch index of the transaction.
+       */
+      virtual void setBatchIndex(types::BatchIndex idx) = 0;
+
       /*
        * @return Batch Meta if exists
        */
