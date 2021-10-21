@@ -41,9 +41,6 @@ namespace shared_model {
 
       const interface::types::HashType &reducedHash() const override;
 
-      interface::types::BatchIndex getBatchIndex() const override;
-      void setBatchIndex(interface::types::BatchIndex idx) override;
-
       bool addSignature(
           interface::types::SignedHexStringView signed_blob,
           interface::types::PublicKeyHexStringView public_key) override;
@@ -67,7 +64,6 @@ namespace shared_model {
      private:
       struct Impl;
       std::unique_ptr<Impl> impl_;
-      uint64_t batch_index_;
     };
   }  // namespace proto
 }  // namespace shared_model

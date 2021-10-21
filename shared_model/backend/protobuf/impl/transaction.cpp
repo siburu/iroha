@@ -65,15 +65,15 @@ namespace shared_model {
       interface::types::HashType hash_{makeHash(payload_blob_)};
     };
 
-    Transaction::Transaction(const TransportType &transaction) : batch_index_(0ull) {
+    Transaction::Transaction(const TransportType &transaction) {
       impl_ = std::make_unique<Transaction::Impl>(transaction);
     }
 
-    Transaction::Transaction(TransportType &&transaction) : batch_index_(0ull) {
+    Transaction::Transaction(TransportType &&transaction) {
       impl_ = std::make_unique<Transaction::Impl>(std::move(transaction));
     }
 
-    Transaction::Transaction(TransportType &transaction) : batch_index_(0ull) {
+    Transaction::Transaction(TransportType &transaction) {
       impl_ = std::make_unique<Transaction::Impl>(transaction);
     }
 
@@ -86,14 +86,6 @@ namespace shared_model {
     Transaction::Transaction(Transaction &&transaction) noexcept = default;
 
     Transaction::~Transaction() = default;
-
-    interface::types::BatchIndex Transaction::getBatchIndex() const {
-      return batch_index_;
-    }
-
-    void Transaction::setBatchIndex(interface::types::BatchIndex idx) {
-      batch_index_ = idx;
-    }
 
     const interface::types::AccountIdType &Transaction::creatorAccountId()
         const {

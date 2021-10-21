@@ -30,7 +30,6 @@ namespace shared_model {
     class EngineReceipt;
 
     namespace types {
-      using BatchIndex = uint64_t;
       /// Type of hash
       using HashType = crypto::Hash;
       /// Blob type
