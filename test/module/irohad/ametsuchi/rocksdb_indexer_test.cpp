@@ -57,13 +57,13 @@ class RocksDBIndexerTest : public ::testing::Test {
     forTransactionByPosition<kDbOperation::kPut>(
         common, account_2_, ts_1_, 1, 2);
 
-    common.valueBuffer().assign("TRUE");
+    common.valueBuffer().assign("T");
     forTransactionStatus<kDbOperation::kPut>(common, h_1_);
 
-    common.valueBuffer().assign("FALSE");
+    common.valueBuffer().assign("F");
     forTransactionStatus<kDbOperation::kPut>(common, h_2_);
 
-    common.valueBuffer().assign("TRUE");
+    common.valueBuffer().assign("T");
     forTransactionStatus<kDbOperation::kPut>(common, h_3_);
 
     common.commit();
@@ -185,19 +185,19 @@ TEST_F(RocksDBIndexerTest, SimpleCheckTxStatus) {
       common, h_1_);
   ASSERT_TRUE(iroha::expected::hasValue(result));
   ASSERT_TRUE(result.assumeValue());
-  ASSERT_EQ(*result.assumeValue(), "TRUE");
+  ASSERT_EQ(*result.assumeValue(), "T");
 
   result = forTransactionStatus<kDbOperation::kGet, kDbEntry::kMustExist>(
       common, h_2_);
   ASSERT_TRUE(iroha::expected::hasValue(result));
   ASSERT_TRUE(result.assumeValue());
-  ASSERT_EQ(*result.assumeValue(), "FALSE");
+  ASSERT_EQ(*result.assumeValue(), "F");
 
   result = forTransactionStatus<kDbOperation::kGet, kDbEntry::kMustExist>(
       common, h_3_);
   ASSERT_TRUE(iroha::expected::hasValue(result));
   ASSERT_TRUE(result.assumeValue());
-  ASSERT_EQ(*result.assumeValue(), "TRUE");
+  ASSERT_EQ(*result.assumeValue(), "T");
 }
 
 /**
