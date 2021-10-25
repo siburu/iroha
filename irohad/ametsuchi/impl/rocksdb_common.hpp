@@ -10,6 +10,7 @@
 #include <mutex>
 #include <string>
 #include <string_view>
+#include <execinfo.h>
 
 #include <fmt/compile.h>
 #include <fmt/format.h>
@@ -577,6 +578,20 @@ namespace iroha::ametsuchi {
           context_guard_(tx_context_->this_context_cs) {
       assert(tx_context_);
       assert(tx_context_->db_port);
+
+      static constexpr size_t kStackSize = 20;
+      void *a[kStackSize];
+      auto const s = backtrace(a, kStackSize);
+
+      char buffer[2*1024] = {0};
+      auto pos = snprintf(buffer, sizeof(buffer), "<RDB Common lock>\n");
+      for (int32_t ix = 0; ix < s; ++ix)
+        pos += snprintf(buffer + pos,
+                        sizeof(buffer) - pos,
+                        "0x%016llx\n",
+                        (long long unsigned int)a[ix]);
+
+      printf("%s", buffer);
     }
 
     /// Get value buffer
