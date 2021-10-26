@@ -111,7 +111,6 @@ namespace iroha::consensus::yac {
     std::shared_ptr<YacNetwork> network_;
     std::shared_ptr<YacCryptoProvider> crypto_;
     std::shared_ptr<Timer> timer_;
-    std::map<Round, std::unordered_set<VoteMessage>> future_states_;
   };
 }  // namespace iroha::consensus::yac
 

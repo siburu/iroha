@@ -61,21 +61,7 @@ std::optional<iroha::consensus::yac::Answer> Yac::processRoundSwitch(
     shared_model::interface::types::PeerList const &peers) {
   round_ = round;
   cluster_order_ = peers;
-  std::optional<iroha::consensus::yac::Answer> result;
-  auto it = future_states_.lower_bound(round_);
-  while (it != future_states_.end()
-         and it->first.block_round == round_.block_round) {
-    if (not it->second.empty()) {
-      if (auto maybe_answer = onState(std::vector<VoteMessage>(
-              std::make_move_iterator(it->second.begin()),
-              std::make_move_iterator(it->second.end())))) {
-        result = std::move(maybe_answer);
-      }
-    }
-    ++it;
-  }
-  future_states_.erase(future_states_.begin(), it);
-  return result;
+  return std::optional<iroha::consensus::yac::Answer> {};
 }
 
 // ------|Hash gate|------
@@ -145,7 +131,6 @@ std::optional<iroha::consensus::yac::Answer> Yac::onState(
 
     if (proposal_round.block_round > round_.block_round) {
       log_->info("Pass state from future for {} to pipeline", proposal_round);
-      future_states_[proposal_round].insert(state.begin(), state.end());
       return FutureMessage{std::move(state)};
     }
 
