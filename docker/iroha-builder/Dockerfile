@@ -39,12 +39,16 @@ RUN cd /opt/ && \
     cd git-secret && make build && \
     PREFIX="/usr/local" make install
 
-# golang stuff for iroha+burrow
+## golang stuff for iroha+burrow
 RUN curl -fL https://golang.org/dl/go1.14.2.linux-$(dpkg --print-architecture).tar.gz | tar -C /opt -xz
 ENV GOPATH=/opt/gopath
 RUN mkdir ${GOPATH}
 ENV PATH=${PATH}:/opt/go/bin:${GOPATH}/bin
 RUN go get github.com/golang/protobuf/protoc-gen-go
+
+## Rust-lang stuff for iroha+ursa
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+#Maybe add to /etc/profile :  source $HOME/.cargo/env
 
 ## Allow access to database, trust local connections
 # RUN sed -i /etc/postgresql/12/main/pg_hba.conf -Ee's,(^local\s+all\s+postgres\s+)\w+,\1trust,'
