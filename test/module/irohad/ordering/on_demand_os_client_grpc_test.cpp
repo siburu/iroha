@@ -95,6 +95,8 @@ class OnDemandOsClientGrpcTest : public ::testing::Test {
  * @then data is correctly serialized and sent
  */
 TEST_F(OnDemandOsClientGrpcTest, onBatches) {
+  auto manager = getSubscription();
+
   proto::BatchesRequest request;
   EXPECT_CALL(*stub, SendBatches(_, _, _))
       .WillOnce(DoAll(SaveArg<1>(&request), Return(grpc::Status::OK)));
@@ -108,7 +110,28 @@ TEST_F(OnDemandOsClientGrpcTest, onBatches) {
       std::make_unique<shared_model::interface::TransactionBatchImpl>(
           shared_model::interface::types::SharedTxsCollectionType{
               std::make_unique<shared_model::proto::Transaction>(tx)}));
+
+  auto scheduler = std::make_shared<subscription::SchedulerBase>();
+  auto tid = getSubscription()->dispatcher()->bind(scheduler);
+
+  uint64_t txCount = 1ull;
+  auto batches_subscription =
+      SubscriberCreator<bool, uint64_t>::template create<
+          EventTypes::kSendBatchComplete>(
+          static_cast<iroha::SubscriptionEngineHandlers>(*tid),
+          [scheduler(utils::make_weak(scheduler)), &txCount](auto,
+                                                             uint64_t count) {
+            assert(count <= txCount);
+            txCount -= count;
+            if (txCount == 0ull)
+              if (auto maybe_scheduler = scheduler.lock())
+                maybe_scheduler->dispose();
+          });
+
   client->onBatches(std::move(collection));
+
+  scheduler->process();
+  getSubscription()->dispatcher()->unbind(*tid);
 
   ASSERT_EQ(request.transactions()
                 .Get(0)
@@ -116,6 +139,8 @@ TEST_F(OnDemandOsClientGrpcTest, onBatches) {
                 .reduced_payload()
                 .creator_account_id(),
             creator);
+
+  manager->dispose();
 }
 
 /**

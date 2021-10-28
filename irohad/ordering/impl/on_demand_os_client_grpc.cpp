@@ -38,6 +38,8 @@ namespace {
     google::protobuf::Empty response;
     maybe_log->info("Sending batches");
     auto status = maybe_stub->SendBatches(&context, request, &response);
+    iroha::getSubscription()->notify(iroha::EventTypes::kSendBatchComplete, uint64_t(request.transactions().size()));
+
     if (not status.ok()) {
       maybe_log->warn(
           "RPC failed: {} {}", context.peer(), status.error_message());
