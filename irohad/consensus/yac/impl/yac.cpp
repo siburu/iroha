@@ -175,16 +175,11 @@ void Yac::votingStep(VoteMessage vote,
     return;
   }
 
-  enum { kRotatePeriod = 10 };
-
-  if (0 != attempt && 0 == (attempt % kRotatePeriod)) {
-    vote_storage_.remove(vote.hash.vote_round);
-  }
-
   /**
-   * 3 attempts to build and commit block before we think that round is
+   * N attempts to build and commit block before we think that round is
    * freezed
    */
+  static constexpr uint32_t kRotatePeriod = 10ul;
   if (attempt == kRotatePeriod) {
     vote.hash.vote_hashes.proposal_hash.clear();
     vote.hash.vote_hashes.block_hash.clear();
@@ -193,7 +188,7 @@ void Yac::votingStep(VoteMessage vote,
   }
 
   const auto &current_leader = order.currentLeader();
-
+  vote.layer = attempt;
   log_->info("Vote {} to peer {}", vote, current_leader);
 
   propagateStateDirectly(current_leader, {vote});

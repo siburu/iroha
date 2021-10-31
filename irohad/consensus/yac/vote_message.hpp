@@ -20,9 +20,12 @@ namespace iroha::consensus::yac {
   struct VoteMessage {
     YacHash hash;
     std::shared_ptr<shared_model::interface::Signature> signature;
+    uint32_t layer;
+
+    VoteMessage() : layer(0ul) {}
 
     bool operator==(const VoteMessage &rhs) const {
-      return hash == rhs.hash and *signature == *rhs.signature;
+      return hash == rhs.hash and *signature == *rhs.signature && layer == rhs.layer;
     }
 
     bool operator!=(const VoteMessage &rhs) const {
@@ -34,6 +37,7 @@ namespace iroha::consensus::yac {
           .init("VoteMessage")
           .appendNamed("yac hash", hash)
           .appendNamed("signature", signature)
+          .appendNamed("layer", layer)
           .finalize();
     }
   };
