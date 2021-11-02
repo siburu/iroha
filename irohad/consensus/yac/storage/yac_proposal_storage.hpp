@@ -28,7 +28,6 @@ namespace iroha::consensus::yac {
   class YacProposalStorage {
    private:
     // --------| private api |--------
-    using Layer = uint32_t;
 
     /**
      * Find block index with provided parameters,
@@ -36,7 +35,7 @@ namespace iroha::consensus::yac {
      * @param store_hash - hash of store of interest
      * @return iterator to storage
      */
-    auto findStore(Layer layer, const YacHash &store_hash);
+    auto findStore(const YacHash &store_hash);
 
    public:
     // --------| public api |--------
@@ -76,6 +75,7 @@ namespace iroha::consensus::yac {
 
    private:
     // --------| private api |--------
+
     /**
      * Possible to insert vote
      * @param msg - vote for insertion
@@ -102,7 +102,7 @@ namespace iroha::consensus::yac {
      * number of not voted peers + most frequent vote count < supermajority
      * @return answer with proof
      */
-    boost::optional<Answer> findRejectProof(Layer layer);
+    boost::optional<Answer> findRejectProof();
 
     // --------| fields |--------
 
@@ -114,7 +114,7 @@ namespace iroha::consensus::yac {
     /**
      * Vector of block storages based on this proposal
      */
-     std::unordered_map<Layer, std::vector<YacBlockStorage>> block_storages_;
+    std::vector<YacBlockStorage> block_storages_;
 
     /**
      * Key of the storage

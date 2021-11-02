@@ -13,22 +13,20 @@ using iroha::consensus::yac::YacProposalStorage;
 
 // --------| private api |--------
 
-auto YacProposalStorage::findStore(YacProposalStorage::Layer layer, const YacHash &store_hash) {
-  auto &bstorage = block_storages_[layer];
-
+auto YacProposalStorage::findStore(const YacHash &store_hash) {
   // find exist
-  auto iter = std::find_if(bstorage.begin(),
-                           bstorage.end(),
+  auto iter = std::find_if(block_storages_.begin(),
+                           block_storages_.end(),
                            [&store_hash](auto block_storage) {
                              auto storage_key = block_storage.getStorageKey();
                              return storage_key == store_hash;
                            });
-  if (iter != bstorage.end()) {
+  if (iter != block_storages_.end()) {
     return iter;
   }
   // insert and return new
-  return bstorage.emplace(
-      bstorage.end(),
+  return block_storages_.emplace(
+      block_storages_.end(),
       YacHash(store_hash.vote_round,
               store_hash.vote_hashes.proposal_hash,
               store_hash.vote_hashes.block_hash),
@@ -61,7 +59,7 @@ boost::optional<iroha::consensus::yac::Answer> YacProposalStorage::insert(
                msg.hash.vote_hashes.proposal_hash,
                msg.hash.vote_hashes.block_hash);
 
-    auto iter = findStore(msg.layer, msg.hash);
+    auto iter = findStore(msg.hash);
     auto block_state = iter->insert(msg);
 
     // Single BlockStorage always returns CommitMessage because it
@@ -71,7 +69,7 @@ boost::optional<iroha::consensus::yac::Answer> YacProposalStorage::insert(
       current_state_ = std::move(block_state);
     } else {
       // try to find reject case
-      auto reject_state = findRejectProof(msg.layer);
+      auto reject_state = findRejectProof();
       if (reject_state) {
         log_->info("Found reject proof");
         current_state_ = std::move(reject_state);
@@ -109,12 +107,8 @@ bool YacProposalStorage::checkProposalRound(const Round &vote_round) {
 }
 
 bool YacProposalStorage::checkPeerUniqueness(const VoteMessage &msg) {
-  auto it = block_storages_.find(msg.layer);
-  if (it == block_storages_.end())
-    return true;
-
-  return std::all_of(it->second.begin(),
-                     it->second.end(),
+  return std::all_of(block_storages_.begin(),
+                     block_storages_.end(),
                      [&msg](YacBlockStorage &storage) {
                        if (storage.getStorageKey() != msg.hash) {
                          return true;
@@ -124,20 +118,17 @@ bool YacProposalStorage::checkPeerUniqueness(const VoteMessage &msg) {
 }
 
 boost::optional<iroha::consensus::yac::Answer>
-YacProposalStorage::findRejectProof(Layer layer) {
-  assert(block_storages_.count(layer) == 1ul);
-
-  auto &bstorage = block_storages_[layer];
+YacProposalStorage::findRejectProof() {
   auto is_reject = not supermajority_checker_->canHaveSupermajority(
-      bstorage | boost::adaptors::transformed([](const auto &storage) {
+      block_storages_ | boost::adaptors::transformed([](const auto &storage) {
         return storage.getNumberOfVotes();
       }),
       peers_in_round_);
 
   if (is_reject) {
     std::vector<VoteMessage> result;
-    std::for_each(bstorage.begin(),
-                  bstorage.end(),
+    std::for_each(block_storages_.begin(),
+                  block_storages_.end(),
                   [&result](auto &storage) {
                     auto votes_from_block_storage = storage.getVotes();
                     std::move(votes_from_block_storage.begin(),
