@@ -194,7 +194,7 @@ void Yac::votingStep(VoteMessage vote,
    * N attempts to build and commit block before we think that round is
    * freezed
    */
-  auto const kRotatePeriod = order.getPeers().size();
+  static constexpr uint32_t kRotatePeriod = 10ul;
   if (attempt == kRotatePeriod) {
     vote.hash.vote_hashes.proposal_hash.clear();
     vote.hash.vote_hashes.block_hash.clear();

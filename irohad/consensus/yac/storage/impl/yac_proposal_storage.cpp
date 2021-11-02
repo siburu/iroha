@@ -66,17 +66,15 @@ boost::optional<iroha::consensus::yac::Answer> YacProposalStorage::insert(
 
     // Single BlockStorage always returns CommitMessage because it
     // aggregates votes for a single hash.
-    if (!current_state_) {
-      if (block_state) {
-        // supermajority on block achieved
-        current_state_ = std::move(block_state);
-      } else {
-        // try to find reject case
-        auto reject_state = findRejectProof(msg.layer);
-        if (reject_state) {
-          log_->info("Found reject proof");
-          current_state_ = std::move(reject_state);
-        }
+    if (block_state) {
+      // supermajority on block achieved
+      current_state_ = std::move(block_state);
+    } else {
+      // try to find reject case
+      auto reject_state = findRejectProof(msg.layer);
+      if (reject_state) {
+        log_->info("Found reject proof");
+        current_state_ = std::move(reject_state);
       }
     }
   }
