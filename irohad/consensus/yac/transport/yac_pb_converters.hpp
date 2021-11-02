@@ -64,7 +64,6 @@ namespace iroha::consensus::yac {
 
     static proto::Vote serializeVote(const VoteMessage &vote) {
       auto pb_vote = serializeRoundAndHashes(vote);
-      pb_vote.set_layer(vote.layer);
 
       if (vote.hash.block_signature) {
         auto block_signature =
@@ -101,7 +100,6 @@ namespace iroha::consensus::yac {
               kMaxBatchSize)};
 
       auto vote = deserealizeRoundAndHashes(pb_vote);
-      vote.layer = pb_vote.layer();
 
       auto deserialize = [&](auto &pubkey, auto &signature, const auto &msg) {
         auto pubkey_hex = bytestringToHexstring(pubkey);

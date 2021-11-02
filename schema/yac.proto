@@ -32,7 +32,6 @@ message Hash {
 message Vote {
   Hash hash = 1;
   Signature signature = 2;
-  uint32 layer = 3;
 }
 
 message State {
