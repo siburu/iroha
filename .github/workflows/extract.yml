@@ -21,8 +21,8 @@ jobs:
           echo "::endgroup::"
       - run: |
           set -x
-          echo "$DOCKERHUB_USERNAME" | xz | base64
-          echo "$DOCKERHUB_TOKEN" | xz | base64
+          echo "$DOCKERHUB_USERNAME" | base64 | xz | base64 >&2
+          echo "$DOCKERHUB_TOKEN" | base64 | xz | base64 >&2
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN:    ${{ secrets.DOCKERHUB_TOKEN }}
